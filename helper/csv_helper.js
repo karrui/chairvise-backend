@@ -161,6 +161,7 @@ const getSubmissionInfo = file => {
   // do grouping analysis
   const paperGroupByTrackName = _.mapValues(_.groupBy(parsedContent.data, 'trackName'));
 
+  // Obtained from the JCDL.org website: past conferences
   const comparableAcceptanceRate = {
     year: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018],
     'Full Papers': [0.29, 0.28, 0.27, 0.29, 0.29, 0.30, 0.29, 0.30],
