@@ -103,13 +103,13 @@ const getSubmissionInfo = file => {
   parsedContent.data.map(row => {
     if (row.decision === 'reject') {
       rejectedSubs.push(row);
-      rejectedKeywords.push(...row.keywords.split(/[\r\n]+/));
+      rejectedKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
     } else if (row.decision === 'accept') {
       acceptedSubs.push(row);
-      acceptedKeywords.push(...row.keywords.split(/[\r\n]+/));
+      acceptedKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
       acceptedAuthorNames.push(...row.authors.replace(' and ', ',').split(',').map(x => x.trim()));
     }
-    allKeywords.push(...row.keywords.split(/[\r\n]+/));
+    allKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
     trackNames.push(row.trackName);
     submissionTimes.push(row.submitTime.split(' ')[0]);
     lastUpdateTimes.push(row.submitTime.split(' ')[0]);
@@ -131,11 +131,11 @@ const getSubmissionInfo = file => {
 
   const acceptedKeywordMap = _.countBy(acceptedKeywords);
   const rejectedKeywordMap = _.countBy(rejectedKeywords);
-  const allKeywordMap = _.countBy(allKeywords);
+  const overallKeywordMap = _.countBy(allKeywords);
 
   const acceptedKeywordList = util.getSortedArrayFromMapUsingCount(acceptedKeywordMap);
   const rejectedKeywordList = util.getSortedArrayFromMapUsingCount(rejectedKeywordMap);
-  const allKeywordList = util.getSortedArrayFromMapUsingCount(allKeywordMap);
+  const overallKeywordList = util.getSortedArrayFromMapUsingCount(overallKeywordMap);
 
   const acceptanceRate = acceptedSubs.length / parsedContent.data.length;
   const subTimeCounts = _.countBy(submissionTimes);
@@ -144,26 +144,19 @@ const getSubmissionInfo = file => {
   const timestamps = util.getSortedArrayFromMapUsingKey(subTimeCounts);
   const lastEditStamps = util.getSortedArrayFromMapUsingKey(updateTimeCounts);
 
-  const timestamp = [];
-  const subTimeCount = [];
+  const timeSeries = [];
   let cumulativeStampCount = 0;
   timestamps.map(element => {
-    timestamp.push(element[0]);
     cumulativeStampCount += element[1];
-    subTimeCount.push(cumulativeStampCount);
+    timeSeries.push({ x: element[0], y: cumulativeStampCount });
   });
 
-  const lastEditStamp = [];
-  const lastEditCount = [];
+  const lastEditSeries = [];
   let cumulativeEditCount = 0;
   lastEditStamps.map(element => {
-    lastEditStamp.push(element[0]);
     cumulativeEditCount += element[1];
-    lastEditCount.push(cumulativeEditCount);
+    lastEditSeries.push({ x: element[0], y: cumulativeEditCount });
   });
-
-  const timeSeries = { x: timestamp, y: subTimeCount };
-  const lastEditSeries = { x: lastEditStamp, y: lastEditCount };
 
   // do grouping analysis
   const paperGroupByTrackName = _.mapValues(_.groupBy(parsedContent.data, 'trackName'));
@@ -182,7 +175,7 @@ const getSubmissionInfo = file => {
     const acceptedAuthorsThisTrack = [];
     const currentGroupKeywords = [];
     paperGroupByTrackName[paperGroup].map(row => {
-      currentGroupKeywords.push(...row.keywords.split(/[\r\n]+/));
+      currentGroupKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
       if (row.decision === 'accept') {
         acceptedPapersThisTrack.push(row);
         acceptedAuthorsThisTrack.push(...row.authors.replace(' and ', ',').split(',').map(x => x.trim()));
@@ -212,20 +205,19 @@ const getSubmissionInfo = file => {
 
   const parsedResult = {
     acceptanceRate,
-    allKeywordMap,
-    allKeywordList,
+    overallKeywordMap,
+    overallKeywordList,
     acceptedKeywordMap,
     acceptedKeywordList,
     rejectedKeywordMap,
     rejectedKeywordList,
     keywordsByTrack,
     acceptanceRateByTrack,
-    topAcceptedAuthorsMap,
+    topAcceptedAuthors: topAcceptedAuthorsMap,
     topAuthorsByTrack,
     timeSeries,
     lastEditSeries,
-    comparableAcceptanceRate,
-    paperGroupByTrackName
+    comparableAcceptanceRate
   };
 
   return { infoType: 'submission', infoData: parsedResult };
