@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
-import moment from 'moment';
 import _ from 'lodash';
+import util from './util';
+
 const papaConfig = {
   header: true,
   dynamicTyping: true,
@@ -41,41 +42,23 @@ const getAuthorInfo = file => {
   const countryCounts = _.countBy(countries);
   const affiliationCounts = _.countBy(affiliations);
 
-  const sortableAuthor = [];
-  for (const author in authorCounts) {
-    sortableAuthor.push([author, authorCounts[author]]);
-  }
-  sortableAuthor.sort((a, b) => b[1] - a[1]);
-
   const authorLabels = [];
   const authorData = [];
-  sortableAuthor.map(x => {
+  util.getSortedArrayFromMapUsingCount(authorCounts).map(x => {
     authorLabels.push(x[0]);
     authorData.push(x[1]);
   });
 
-  const sortableCountry = [];
-  for (const country in countryCounts) {
-    sortableCountry.push([country, countryCounts[country]]);
-  }
-  sortableCountry.sort((a, b) => b[1] - a[1]);
-
   const countryLabels = [];
   const countryData = [];
-  sortableCountry.map(x => {
+  util.getSortedArrayFromMapUsingCount(countryCounts).map(x => {
     countryLabels.push(x[0]);
     countryData.push(x[1]);
   });
 
-  const sortableAffiliation = [];
-  for (const affiliation in affiliationCounts) {
-    sortableAffiliation.push([affiliation, affiliationCounts[affiliation]]);
-  }
-  sortableAffiliation.sort((a, b) => b[1] - a[1]);
-
   const affiliationLabels = [];
   const affiliationData = [];
-  sortableAffiliation.map(x => {
+  util.getSortedArrayFromMapUsingCount(affiliationCounts).map(x => {
     affiliationLabels.push(x[0]);
     affiliationData.push(x[1]);
   });
@@ -118,37 +101,25 @@ const getSubmissionInfo = file => {
   const trackNames = [];
   const acceptedAuthorNames = [];
   parsedContent.data.map(row => {
-    if (row.decision === 'rejected') {
+    if (row.decision === 'reject') {
       rejectedSubs.push(row);
       rejectedKeywords.push(...row.keywords.split(/[\r\n]+/));
-    } else {
+    } else if (row.decision === 'accept') {
       acceptedSubs.push(row);
       acceptedKeywords.push(...row.keywords.split(/[\r\n]+/));
-      acceptedAuthorNames.push(row.firstName + ' ' + row.lastName);
+      acceptedAuthorNames.push(...row.authors.replace(' and ', ',').split(',').map(x => x.trim()));
     }
     allKeywords.push(...row.keywords.split(/[\r\n]+/));
     trackNames.push(row.trackName);
-    submissionTimes.push(moment(row.submitTime).format('ll'));
-    lastUpdateTimes.push(moment(row.lastUpdateTime).format('ll'));
+    submissionTimes.push(row.submitTime.split(' ')[0]);
+    lastUpdateTimes.push(row.submitTime.split(' ')[0]);
   });
 
-  submissionTimes.sort();
-  lastUpdateTimes.sort();
-
-  // timeseries todo
-  const timeSeries = {};
-  const lastEditSeries = {};
-
-  const sortableAuthorNames = [];
   const acceptedAuthorCount = _.countBy(acceptedAuthorNames);
-  for (const author in acceptedAuthorCount) {
-    sortableAuthorNames.push([author, acceptedAuthorCount[author]]);
-  }
-  sortableAuthorNames.sort((a, b) => b[1] - a[1]);
 
   const authorNames = [];
   const authorCounts = [];
-  sortableAuthorNames.map(x => {
+  util.getSortedArrayFromMapUsingCount(acceptedAuthorCount).map(x => {
     authorNames.push(x[0]);
     authorCounts.push(x[1]);
   });
@@ -162,40 +133,40 @@ const getSubmissionInfo = file => {
   const rejectedKeywordMap = _.countBy(rejectedKeywords);
   const allKeywordMap = _.countBy(allKeywords);
 
-  const acceptedKeywordList = [];
-  for (const keyword in acceptedKeywordMap) {
-    acceptedKeywordList.push([keyword, acceptedKeywordMap[keyword]]);
-  }
-  acceptedKeywordList.sort((a, b) => b[1] - a[1]);
-
-  const rejectedKeywordList = [];
-  for (const keyword in rejectedKeywordMap) {
-    rejectedKeywordList.push([keyword, rejectedKeywordMap[keyword]]);
-  }
-  rejectedKeywordList.sort((a, b) => b[1] - a[1]);
-
-  const allKeywordList = [];
-  for (const keyword in allKeywordMap) {
-    allKeywordList.push([keyword, allKeywordMap[keyword]]);
-  }
-  allKeywordList.sort((a, b) => b[1] - a[1]);
+  const acceptedKeywordList = util.getSortedArrayFromMapUsingCount(acceptedKeywordMap);
+  const rejectedKeywordList = util.getSortedArrayFromMapUsingCount(rejectedKeywordMap);
+  const allKeywordList = util.getSortedArrayFromMapUsingCount(allKeywordMap);
 
   const acceptanceRate = acceptedSubs.length / parsedContent.data.length;
   const subTimeCounts = _.countBy(submissionTimes);
   const updateTimeCounts = _.countBy(lastUpdateTimes);
 
-  const sortableSubTimes = [];
-  for (const submissionTime in subTimeCounts) {
-    sortableSubTimes.push([submissionTime, subTimeCounts[submissionTime]]);
-  }
-  sortableSubTimes.sort((a, b) => b[1] - a[1]);
+  const timestamps = util.getSortedArrayFromMapUsingKey(subTimeCounts);
+  const lastEditStamps = util.getSortedArrayFromMapUsingKey(updateTimeCounts);
 
-  const sortableUpdateTimes = [];
-  for (const updateTime in updateTimeCounts) {
-    sortableUpdateTimes.push([updateTime, updateTimeCounts[updateTime]]);
-  }
-  sortableUpdateTimes.sort((a, b) => b[1] - a[1]);
-  const paperGroupByTrackName = _.groupBy(parsedContent.data, 'trackName');
+  const timestamp = [];
+  const subTimeCount = [];
+  let cumulativeStampCount = 0;
+  timestamps.map(element => {
+    timestamp.push(element[0]);
+    cumulativeStampCount += element[1];
+    subTimeCount.push(cumulativeStampCount);
+  });
+
+  const lastEditStamp = [];
+  const lastEditCount = [];
+  let cumulativeEditCount = 0;
+  lastEditStamps.map(element => {
+    lastEditStamp.push(element[0]);
+    cumulativeEditCount += element[1];
+    lastEditCount.push(cumulativeEditCount);
+  });
+
+  const timeSeries = { x: timestamp, y: subTimeCount };
+  const lastEditSeries = { x: lastEditStamp, y: lastEditCount };
+
+  // do grouping analysis
+  const paperGroupByTrackName = _.mapValues(_.groupBy(parsedContent.data, 'trackName'));
 
   const comparableAcceptanceRate = {
     year: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018],
@@ -203,29 +174,26 @@ const getSubmissionInfo = file => {
     'Short Papers': [0.29, 0.37, 0.31, 0.31, 0.32, 0.50, 0.35, 0.32]
   };
 
-  const groupedKeywords = [];
-  const acceptanceRateByTrack = [];
+  const keywordsByTrack = {};
+  const acceptanceRateByTrack = {};
   const topAuthorsByTrack = {};
   for (const paperGroup in paperGroupByTrackName) {
     const acceptedPapersThisTrack = [];
     const acceptedAuthorsThisTrack = [];
-
+    const currentGroupKeywords = [];
     paperGroupByTrackName[paperGroup].map(row => {
-      groupedKeywords.push(...row.keywords.split(/[\r\n]+/));
-      if (row.decision === 'accepted') {
+      currentGroupKeywords.push(...row.keywords.split(/[\r\n]+/));
+      if (row.decision === 'accept') {
         acceptedPapersThisTrack.push(row);
-        acceptedAuthorsThisTrack.push(row.firstName + ' ' + row.lastName);
+        acceptedAuthorsThisTrack.push(...row.authors.replace(' and ', ',').split(',').map(x => x.trim()));
       }
     });
+    const countedCurrentGroupKeywords = _.countBy(currentGroupKeywords);
+    keywordsByTrack[paperGroup] = util.getSortedArrayFromMapUsingCount(countedCurrentGroupKeywords);
     const acceptedAuthorsThisTrackCount = _.countBy(acceptedAuthorsThisTrack);
-    const sortableAcceptedAuthorsThisTrack = [];
-    for (const acceptedAuthor in acceptedAuthorsThisTrackCount) {
-      sortableAcceptedAuthorsThisTrack.push([acceptedAuthor, acceptedAuthorsThisTrackCount[acceptedAuthor]]);
-    }
-    sortableAcceptedAuthorsThisTrack.sort((a, b) => b[1] - a[1]);
     const authorNamesThisTrack = [];
     const authorCountsThisTrack = [];
-    sortableAcceptedAuthorsThisTrack.map(x => {
+    util.getSortedArrayFromMapUsingCount(acceptedAuthorsThisTrackCount).map(x => {
       authorNamesThisTrack.push(x[0]);
       authorCountsThisTrack.push(x[1]);
     });
@@ -235,13 +203,12 @@ const getSubmissionInfo = file => {
       counts: authorCountsThisTrack
     };
 
-    acceptanceRateByTrack[paperGroup] = acceptedPapersThisTrack / paperGroupByTrackName[paperGroup].length;
+    acceptanceRateByTrack[paperGroup] = acceptedPapersThisTrack.length / paperGroupByTrackName[paperGroup].length;
 
     if (paperGroup === 'Full Papers' || paperGroup === 'Short Papers') {
-      comparableAcceptanceRate[paperGroup].push(acceptedPapersThisTrack / paperGroupByTrackName[paperGroup].length);
+      comparableAcceptanceRate[paperGroup].push(acceptedPapersThisTrack.length / paperGroupByTrackName[paperGroup].length);
     }
   }
-  const keywordsGroupByTrack = _.countBy(groupedKeywords);
 
   const parsedResult = {
     acceptanceRate,
@@ -251,13 +218,14 @@ const getSubmissionInfo = file => {
     acceptedKeywordList,
     rejectedKeywordMap,
     rejectedKeywordList,
-    keywordsGroupByTrack,
+    keywordsByTrack,
     acceptanceRateByTrack,
     topAcceptedAuthorsMap,
     topAuthorsByTrack,
     timeSeries,
     lastEditSeries,
-    comparableAcceptanceRate
+    comparableAcceptanceRate,
+    paperGroupByTrackName
   };
 
   return { infoType: 'submission', infoData: parsedResult };

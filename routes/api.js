@@ -24,8 +24,6 @@ router.post('/upload', upload.single('file'), (req, res) => {
     default:
       res.sendStatus(422); // unknown file, no api to process
   }
-
-  console.log(result);
   res.status(200).json(result);
 });
 
