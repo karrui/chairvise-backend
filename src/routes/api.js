@@ -13,7 +13,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
 
   switch (fileName) {
     case 'review.csv':
-      csvHelper.getReviewInfo(csvFile);
+      result = csvHelper.getReviewInfo(csvFile);
       break;
     case 'author.csv':
       result = csvHelper.getAuthorInfo(csvFile);
