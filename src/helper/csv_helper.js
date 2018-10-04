@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import _ from 'lodash';
-import util, { fillRange, sum } from './util';
+import util, { fillRange, sum, setArrayValuesToZero } from './util';
 
 const papaConfig = {
   header: true,
@@ -91,18 +91,21 @@ const getReviewInfo = file => {
   }
 
   // Idea: from -3 to 3 (min to max scores possible), every 0.25 will be a gap
-  const scoreDistributionCounts = fillRange(-3, 3, 0.25);
-  const recommendDistributionCounts = fillRange(0, 1, 0.1);
+  let scoreDistributionCounts = fillRange(-3, 3, 0.25);
+  let recommendDistributionCounts = fillRange(0, 1, 0.1);
 
   const scoreDistributionLabels = [];
   const recommendDistributionLabels = [];
 
   for (let i = 0; i < scoreDistributionCounts.length - 1; i++) {
-    scoreDistributionLabels[i] = scoreDistributionCounts[i] + ' ~ ' + scoreDistributionCounts[i + 1];
+    scoreDistributionLabels[i] = scoreDistributionCounts[i].toFixed(2) + ' ~ ' + scoreDistributionCounts[i + 1].toFixed(2);
   }
   for (let i = 0; i < recommendDistributionCounts.length - 1; i++) {
-    recommendDistributionLabels[i] = recommendDistributionCounts[i] + ' ~ ' + recommendDistributionCounts[i + 1];
+    recommendDistributionLabels[i] = recommendDistributionCounts[i].toFixed(1) + ' ~ ' + recommendDistributionCounts[i + 1].toFixed(1);
   }
+
+  scoreDistributionCounts = setArrayValuesToZero(scoreDistributionCounts);
+  recommendDistributionCounts = setArrayValuesToZero(recommendDistributionCounts);
 
   const confidenceList = [];
   const recommendList = [];
@@ -119,9 +122,9 @@ const getReviewInfo = file => {
       // overall evaluation || reviewer's confidence || Recommend for best paper
       // Sample: Overall evaluation: -3\nReviewer's confidence: 5\nRecommend for best paper: no
       const evaluation = review.scores.split(/[\r\n]+/);
-      const score = evaluation[0].split(': ')[1];
+      const score = parseInt(evaluation[0].split(': ')[1]);
       scores.push(score);
-      const confidence = evaluation[1].split(': ')[1];
+      const confidence = parseInt(evaluation[1].split(': ')[1]);
       confidences.push(confidence);
       let recommend;
       if (evaluation.length > 2) {
@@ -143,8 +146,9 @@ const getReviewInfo = file => {
     scoreList.push(totalWeightedScore);
     recommendList.push(totalWeightedRecommend);
 
-    const scoreColumn = Math.min(((totalWeightedScore + 3) / 0.25).toFixed(1), 23);
-    const recommendColumn = Math.min(((totalWeightedRecommend) / 0.1).toFixed(1), 9);
+    // 0 based index, but answer is 1 based
+    const scoreColumn = Math.max(Math.ceil((totalWeightedScore + 3) / 0.25) - 1, 0);
+    const recommendColumn = Math.max(Math.ceil((totalWeightedRecommend) / 0.1) - 1, 0);
     scoreDistributionCounts[scoreColumn] += 1;
     recommendDistributionCounts[recommendColumn] += 1;
 
@@ -156,6 +160,7 @@ const getReviewInfo = file => {
     scoreList,
     meanScore: scoreList.reduce(sum) / scoreList.length,
     meanConfidence: confidenceList.reduce(sum) / confidenceList.length,
+    meanRecommend: recommendList.reduce(sum) / recommendList.length,
     recommendList,
     scoreDistribution: { labels: scoreDistributionLabels, counts: scoreDistributionCounts },
     recommendDistribution: { labels: recommendDistributionLabels, counts: recommendDistributionCounts }

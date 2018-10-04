@@ -27,6 +27,8 @@ export const fillRange = (start, stop, interval = 1) => {
   return result;
 };
 
+export const setArrayValuesToZero = array => array.map(x => 0);
+
 export const sum = (a, b) => a + b;
 
 export default {
