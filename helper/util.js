@@ -1,4 +1,4 @@
-const getSortedArrayFromMapUsingCount = input => {
+export const getSortedArrayFromMapUsingCount = input => {
   const sortable = [];
   for (const element in input) {
     sortable.push([element, input[element]]);
@@ -8,7 +8,7 @@ const getSortedArrayFromMapUsingCount = input => {
   return sortable;
 };
 
-const getSortedArrayFromMapUsingKey = input => {
+export const getSortedArrayFromMapUsingKey = input => {
   const sortable = [];
   for (const element in input) {
     sortable.push([element, input[element]]);
@@ -18,7 +18,20 @@ const getSortedArrayFromMapUsingKey = input => {
   return sortable;
 };
 
+export const fillRange = (start, stop, interval = 1) => {
+  const result = [];
+  while (start <= stop) {
+    result.push(start);
+    start = +(start + interval).toFixed(2);
+  }
+  return result;
+};
+
+export const sum = (a, b) => a + b;
+
 export default {
   getSortedArrayFromMapUsingCount,
-  getSortedArrayFromMapUsingKey
+  getSortedArrayFromMapUsingKey,
+  fillRange,
+  sum
 };
