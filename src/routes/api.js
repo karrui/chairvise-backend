@@ -6,6 +6,10 @@ import csvHelper from '../helper/csv_helper';
 let router = express.Router();
 let upload = multer();
 
+router.get('/', (req, res, next) => {
+  res.status(200).json({ message: 'Connected, welcome to the backend server for ChairVise' });
+});
+
 router.post('/upload', upload.single('file'), (req, res) => {
   const csvFile = req.file;
   const fileName = csvFile.originalname;
