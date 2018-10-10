@@ -114,6 +114,72 @@ const parseReview = file => {
 
   return formattedContent;
 };
+
+/**
+ * @typedef {Object} submission
+ * @property {number} submissionId The id of the submission
+ * @property {number} trackId The track id of the submission
+ * @property {string} trackName The name of the track
+ * @property {string} title The title of the submission
+ * @property {string[]} authors An array of the authors of the submission
+ * @property {string} submitTime The time the submission was submitted
+ * @property {string} lastUpdateTime The last updated time of the submission
+ * @property {string[]} keywords An array of the keywords of the submission
+ * @property {string} decision Can be "accept", "reject", or "no decision"
+ * @property {boolean} isNotified Whether the acceptance/rejection mail were sent to authors
+ * @property {boolean} isReviewSent Whether the review was sent in the mails
+ * @property {string} abstract The abstract of the submission
+ */
+
+/**
+ * Generates a list of submission objects from the given file (assumed to follow submission.csv structure)
+ * @param {*} file
+ * @returns {submission[]} A list of the parsed submission objects
+ */
+const parseSubmission = file => {
+  // submission.csv
+  // data format:
+  // submission ID | track ID | track name | title | authors | submit time | last update time | form fields | keywords | decision | notified | reviews sent | abstract
+  // File has header
+  let content = file.buffer.toString('utf8');
+  content =
+    'submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, formFields, keywords, decision, notified, reviewsSent, abstract\r' +
+    content.substring(content.indexOf('\r') + 1);
+
+  const parsedContent = Papa.parse(content, papaConfig);
+  if (parsedContent.errors.length !== 0) {
+    // error handling
+    console.error('parsing has issues:', parsedContent.errors);
+    return { error: true };
+  }
+
+  const formattedData = [];
+
+  parsedContent.data.forEach(submission => {
+    const { submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, keywords, decision, notified, reviewsSent, abstract } = submission;
+
+    const authorList = authors.replace(' and ', ',').split(',').map(x => x.trim());
+    const keywordList = keywords.split(/[\r\n]+/).map(x => x.toLowerCase());
+
+    formattedData.push({
+      submissionId,
+      trackId,
+      trackName,
+      title,
+      authors: authorList,
+      submitTime,
+      lastUpdateTime,
+      keywords: keywordList,
+      decision,
+      isNotified: notified === 'yes',
+      isReviewSent: reviewsSent === 'yes',
+      abstract
+    });
+  });
+
+  return formattedData;
+};
+
 const getAuthorInfo = file => {
   const parsedAuthors = parseAuthor(file);
 
@@ -243,20 +309,7 @@ const getReviewInfo = file => {
 };
 
 const getSubmissionInfo = file => {
-  // submission.csv
-  // data format:
-  // submission ID | track ID | track name | title | authors | submit time | last update time | form fields | keywords | decision | notified | reviews sent | abstract
-  // File has header
-  let content = file.buffer.toString('utf8');
-  content =
-    'submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, formFields, keywords, decision, notified, reviewsSent, abstract\r' +
-    content.substring(content.indexOf('\r') + 1);
-  const parsedContent = Papa.parse(content, papaConfig);
-  if (parsedContent.errors.length !== 0) {
-    // error handling
-    console.error('parsing has issues:', parsedContent.errors);
-    // return false;
-  }
+  const parsedSubmissions = parseSubmission(file);
 
   const acceptedSubs = [];
   const rejectedSubs = [];
@@ -267,19 +320,20 @@ const getSubmissionInfo = file => {
   const allKeywords = [];
   const trackNames = [];
   const acceptedAuthorNames = [];
-  parsedContent.data.map(row => {
-    if (row.decision === 'reject') {
-      rejectedSubs.push(row);
-      rejectedKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
-    } else if (row.decision === 'accept') {
-      acceptedSubs.push(row);
-      acceptedKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
-      acceptedAuthorNames.push(...row.authors.replace(' and ', ',').split(',').map(x => x.trim()));
+
+  parsedSubmissions.map(submission => {
+    if (submission.decision === 'reject') {
+      rejectedSubs.push(submission);
+      rejectedKeywords.push(...submission.keywords);
+    } else if (submission.decision === 'accept') {
+      acceptedSubs.push(submission);
+      acceptedKeywords.push(...submission.keywords);
+      acceptedAuthorNames.push(...submission.authors);
     }
-    allKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
-    trackNames.push(row.trackName);
-    submissionTimes.push(row.submitTime.split(' ')[0]);
-    lastUpdateTimes.push(row.submitTime.split(' ')[0]);
+    allKeywords.push(...submission.keywords);
+    trackNames.push(submission.trackName);
+    submissionTimes.push(submission.submitTime.split(' ')[0]);
+    lastUpdateTimes.push(submission.submitTime.split(' ')[0]);
   });
 
   const acceptedAuthorCount = _.countBy(acceptedAuthorNames);
@@ -304,7 +358,7 @@ const getSubmissionInfo = file => {
   const rejectedKeywordList = util.getSortedArrayFromMapUsingCount(rejectedKeywordMap);
   const overallKeywordList = util.getSortedArrayFromMapUsingCount(overallKeywordMap);
 
-  const acceptanceRate = acceptedSubs.length / parsedContent.data.length;
+  const acceptanceRate = acceptedSubs.length / parsedSubmissions.length;
   const subTimeCounts = _.countBy(submissionTimes);
   const updateTimeCounts = _.countBy(lastUpdateTimes);
 
@@ -326,7 +380,7 @@ const getSubmissionInfo = file => {
   });
 
   // do grouping analysis
-  const paperGroupByTrackName = _.mapValues(_.groupBy(parsedContent.data, 'trackName'));
+  const paperGroupByTrackName = _.mapValues(_.groupBy(parsedSubmissions, 'trackName'));
 
   // Obtained from the JCDL.org website: past conferences
   const comparableAcceptanceRate = {
@@ -343,10 +397,10 @@ const getSubmissionInfo = file => {
     const acceptedAuthorsThisTrack = [];
     const currentGroupKeywords = [];
     paperGroupByTrackName[paperGroup].map(row => {
-      currentGroupKeywords.push(...row.keywords.split(/[\r\n]+/).map(x => x.toLowerCase()));
+      currentGroupKeywords.push(...row.keywords);
       if (row.decision === 'accept') {
         acceptedPapersThisTrack.push(row);
-        acceptedAuthorsThisTrack.push(...row.authors.replace(' and ', ',').split(',').map(x => x.trim()));
+        acceptedAuthorsThisTrack.push(...row.authors);
       }
     });
     const countedCurrentGroupKeywords = _.countBy(currentGroupKeywords);
