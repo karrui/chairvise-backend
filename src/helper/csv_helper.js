@@ -50,6 +50,70 @@ const parseAuthor = file => {
 
   return parsedContent.data;
 };
+
+/**
+ * @typedef {Object} review
+ * @property {number} reviewId The id of the review
+ * @property {number} paperId The paper id of that the review is reviewing
+ * @property {number} reviewerId The id of the reviewer
+ * @property {string} reviewerName The name of the reviewer
+ * @property {string} test The full text of the review
+ * @property {Object} scores The review scores
+ * @property {number} overallScore The overall score of the review
+ * @property {string} date The date of the review
+ * @property {string} time The time of the review
+ * @property {number} recommend 1 if paper is recommended, 0 if not
+ */
+/**
+ * Generates a list of review objects from the given file (assumed to follow review.csv structure)
+ * @param {*} file
+ * @returns {review[]} A list of the parsed review objects
+ */
+const parseReview = file => {
+  // review.csv
+  // data format:
+  // review ID | paper ID? | reviewer ID | reviewer name | unknown | text | scores | overall score | unknown | unknown | unknown | unknown | date | time | recommend?
+  // File has NO header
+  const content = 'reviewId, paperId, reviewerId, reviewerName, unknown, text, scores, overallScore, unknown, unknown, unknown, unknown, date, time, recommend\n' +
+    (file.buffer.toString('utf8'));
+  const parsedContent = Papa.parse(content, papaConfig);
+  if (parsedContent.errors.length !== 0) {
+    // error handling
+    console.error('parsing has issues:', parsedContent.errors);
+    return { error: true };
+  }
+
+  const formattedContent = [];
+
+  parsedContent.data.forEach(review => {
+    const { reviewId, paperId, reviewerId, reviewerName, text, scores, overallScore, date, time } = review;
+    const evaluation = scores.split(/[\r\n]+/);
+    const recommendForBestPaper = evaluation.length > 2
+      ? evaluation[2].split(': ')[1] === 'yes'
+        ? 1
+        : 0
+      : 0;
+    const scoreObject = {
+      overallEvaluation: parseInt(evaluation[0].split(': ')[1]),
+      confidence: parseInt(evaluation[1].split(': ')[1]),
+      recommendForBestPaper
+    };
+    formattedContent.push({
+      reviewId,
+      paperId,
+      reviewerId,
+      reviewerName,
+      text,
+      scores: scoreObject,
+      overallScore,
+      date,
+      time,
+      recommend: scoreObject.recommendForBestPaper
+    });
+  });
+
+  return formattedContent;
+};
 const getAuthorInfo = file => {
   const parsedAuthors = parseAuthor(file);
 
@@ -101,21 +165,11 @@ const getAuthorInfo = file => {
 };
 
 const getReviewInfo = file => {
-  // review.csv
-  // data format:
-  // review ID | paper ID? | reviewer ID | reviewer name | unknown | text | scores | overall score | unknown | unknown | unknown | unknown | date | time | recommend?
-  // File has NO header
   // score calculation principles:
   // Weighted Average of the scores, using reviewer's confidence as the weights
   // recommended principles:
   // Yes: 1; No: 0; weighted average of the 1 and 0's, also using reviewer's confidence as the weights
-  const content = 'reviewId, paperId, reviewerId, reviewerName, unknown, text, scores, overallScore, unknown, unknown, unknown, unknown, date, time, recommend\n' + (file.buffer.toString('utf8'));
-  const parsedContent = Papa.parse(content, papaConfig);
-  if (parsedContent.errors.length !== 0) {
-    // error handling
-    console.error('parsing has issues:', parsedContent.errors);
-    // return false;
-  }
+  const parsedReviews = parseReview(file);
 
   // Idea: from -3 to 3 (min to max scores possible), every 0.25 will be a gap
   let scoreDistributionCounts = fillRange(-3, 3, 0.25);
@@ -138,7 +192,7 @@ const getReviewInfo = file => {
   const recommendList = [];
   const scoreList = [];
   const submissionIDReviewMap = {};
-  const reviewsGroupBySubmissionId = _.mapValues(_.groupBy(parsedContent.data, 'paperId'));
+  const reviewsGroupBySubmissionId = _.mapValues(_.groupBy(parsedReviews, 'paperId'));
   for (const submissionId in reviewsGroupBySubmissionId) {
     const scores = [];
     const confidences = [];
@@ -148,20 +202,12 @@ const getReviewInfo = file => {
     reviewsGroupBySubmissionId[submissionId].map(review => {
       // overall evaluation || reviewer's confidence || Recommend for best paper
       // Sample: Overall evaluation: -3\nReviewer's confidence: 5\nRecommend for best paper: no
-      const evaluation = review.scores.split(/[\r\n]+/);
-      const score = parseInt(evaluation[0].split(': ')[1]);
-      scores.push(score);
-      const confidence = parseInt(evaluation[1].split(': ')[1]);
+      const { overallEvaluation, confidence, recommendForBestPaper } = review.scores;
+      scores.push(overallEvaluation);
       confidences.push(confidence);
-      let recommend;
-      if (evaluation.length > 2) {
-        recommend = evaluation[2].split(': ')[1] === 'yes' ? 1 : 0;
-      } else {
-        recommend = 0;
-      }
-      recommends.push(recommend);
-      weightedScores.push(score * confidence);
-      weightedRecommends.push(recommend * confidence);
+      recommends.push(recommendForBestPaper);
+      weightedScores.push(overallEvaluation * confidence);
+      weightedRecommends.push(recommendForBestPaper * confidence);
     });
 
     const confidenceSum = confidences.reduce(sum);
