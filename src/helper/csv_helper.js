@@ -222,7 +222,7 @@ const getAuthorInfo = file => {
   const parsedResult = {
     topAuthors: { labels: authorLabels, data: authorData },
     topCountries: { labels: countryLabels, data: countryData },
-    toporganisations: { labels: affiliationLabels, data: affiliationData }
+    topAffiliations: { labels: affiliationLabels, data: affiliationData }
   };
 
   return { infoType: 'author', infoData: parsedResult };
