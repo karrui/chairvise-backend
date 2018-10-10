@@ -448,5 +448,8 @@ const getSubmissionInfo = file => {
 export default {
   getAuthorInfo,
   getReviewInfo,
-  getSubmissionInfo
+  getSubmissionInfo,
+  parseAuthor,
+  parseSubmission,
+  parseReview
 };
