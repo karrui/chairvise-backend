@@ -9,7 +9,26 @@ const papaConfig = {
   skipEmptyLines: true
 };
 
-const getAuthorInfo = file => {
+/**
+ * @typedef {Object} author
+ * @property {number} submissionId The submissionId of the author
+ * @property {string} firstName The first name of the author
+ * @property {string} lastName The last name of the author
+ * @property {string} email The email of the author
+ * @property {string} country The country of the author
+ * @property {string} affiliation The organization the author belongs to
+ * @property {string} page The web page of the author
+ * @property {number} personId The unique id assigned to the author
+ * @property {boolean} corresponding Whether the author is corresponding author for the paper
+ */
+
+/**
+ * Generates a list of author objects from the given file (assumed to follow author.csv structure)
+ * @param {*} file
+ * @returns {author[]} A list of the parsed author objects if parse successful
+ * @returns {Object} an object with error property if parse fails
+ */
+const parseAuthor = file => {
   // author.csv: header row, author names with affiliations, countries, emails
   // data format:
   // submission ID | f name | s name | email | country | affiliation | page | person ID | corresponding?
@@ -23,15 +42,23 @@ const getAuthorInfo = file => {
   if (parsedContent.errors.length !== 0) {
     // error handling
     console.error('parsing has issues:', parsedContent.errors);
-    // return false;
+    return { error: true };
   }
+
+  // eslint-disable-next-line
+  parsedContent.data.map(author => author.corresponding = author.corresponding === 'yes');
+
+  return parsedContent.data;
+};
+const getAuthorInfo = file => {
+  const parsedAuthors = parseAuthor(file);
 
   const authorList = [];
   const authors = [];
   const countries = [];
   const affiliations = [];
-  parsedContent.data.map(row => {
-    const { firstName, lastName, country, affiliation } = row;
+  parsedAuthors.map(author => {
+    const { firstName, lastName, country, affiliation } = author;
     const name = firstName + ' ' + lastName;
     authorList.push({ name, country, affiliation });
     authors.push(name);
