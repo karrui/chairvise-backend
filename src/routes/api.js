@@ -127,7 +127,7 @@ router.post('/process/:type', (req, res) => {
       res.sendStatus(422); // unknown file, no api to process
   }
 
-  res.sendStatus(200).json(result);
+  res.status(200).json(result);
 });
 
 export default router;
