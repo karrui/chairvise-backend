@@ -23,12 +23,12 @@ const papaConfig = {
  */
 
 /**
- * Generates a list of author objects from the given file (assumed to follow author.csv structure)
+ * Generates json containing a list of author objects from the given file (assumed to follow author.csv structure)
  * @param {*} file
- * @returns {author[]} A list of the parsed author objects if parse successful
+ * @returns {Object} an object with key-value pairs of { authors : author[], uploadDateTime, fileName }
  * @returns {Object} an object with error property if parse fails
  */
-const parseAuthor = file => {
+const parseAuthor = (file, fileName) => {
   // author.csv: header row, author names with organisations, countries, emails
   // data format:
   // submission ID | f name | s name | email | country | organisation | page | person ID | corresponding?
@@ -48,7 +48,11 @@ const parseAuthor = file => {
   // eslint-disable-next-line
   parsedContent.data.map(author => author.corresponding = author.corresponding === 'yes');
 
-  return parsedContent.data;
+  return {
+    authors: parsedContent.data,
+    uploadDateTime: new Date(),
+    fileName: fileName || 'author.csv'
+  };
 };
 
 /**
@@ -66,11 +70,12 @@ const parseAuthor = file => {
  * @property {bool} isRecommended true if the paper is recommended, false if not
  */
 /**
- * Generates a list of review objects from the given file (assumed to follow review.csv structure)
+ * Generates a json containing list of review objects from the given file (assumed to follow review.csv structure)
  * @param {*} file
- * @returns {review[]} A list of the parsed review objects
+ * @returns {Object} an object with key-value pairs of { reviews : review[], uploadDateTime, fileName }
+ * @returns {Object} an object with error property if parse fails
  */
-const parseReview = file => {
+const parseReview = (file, fileName) => {
   // review.csv
   // data format:
   // review ID | paper ID? | reviewer ID | reviewer name | unknown | text | scores | overall score | unknown | unknown | unknown | unknown | date | time | recommend?
@@ -110,7 +115,11 @@ const parseReview = file => {
     });
   });
 
-  return formattedContent;
+  return {
+    reviews: formattedContent,
+    uploadDateTime: new Date(),
+    fileName: fileName || 'review.csv'
+  };
 };
 
 /**
@@ -130,11 +139,12 @@ const parseReview = file => {
  */
 
 /**
- * Generates a list of submission objects from the given file (assumed to follow submission.csv structure)
+ * Generates a json containing a list of submission objects from the given file (assumed to follow submission.csv structure)
  * @param {*} file
- * @returns {submission[]} A list of the parsed submission objects
+ * @returns {Object} an object with key-value pairs of { submissions : submission[], uploadDateTime, fileName }
+ * @returns {Object} an object with error property if parse fails
  */
-const parseSubmission = file => {
+const parseSubmission = (file, fileName) => {
   // submission.csv
   // data format:
   // submission ID | track ID | track name | title | authors | submit time | last update time | form fields | keywords | decision | notified | reviews sent | abstract
@@ -174,12 +184,16 @@ const parseSubmission = file => {
       abstract
     });
   });
-
-  return formattedData;
+  return {
+    submissions: formattedData,
+    uploadDateTime: new Date(),
+    fileName: fileName || 'submission.csv'
+  };
 };
 
-const getAuthorInfo = file => {
-  const parsedAuthors = parseAuthor(file);
+const getAuthorInfo = (file, fileName = 'author.csv') => {
+  const parsed = parseAuthor(file, fileName);
+  const parsedAuthors = parsed.authors;
 
   const authorList = [];
   const authors = [];
@@ -225,15 +239,17 @@ const getAuthorInfo = file => {
     topAffiliations: { labels: affiliationLabels, data: affiliationData }
   };
 
-  return { infoType: 'author', infoData: parsedResult };
+  const { uploadDateTime } = parsed;
+  return { infoType: 'author', infoData: parsedResult, uploadDateTime, fileName };
 };
 
-const getReviewInfo = file => {
+const getReviewInfo = (file, fileName = 'review.csv') => {
   // score calculation principles:
   // Weighted Average of the scores, using reviewer's confidence as the weights
   // recommended principles:
   // Yes: 1; No: 0; weighted average of the 1 and 0's, also using reviewer's confidence as the weights
-  const parsedReviews = parseReview(file);
+  const parsed = parseReview(file);
+  const parsedReviews = parsed.reviews;
 
   // Idea: from -3 to 3 (min to max scores possible), every 0.25 will be a gap
   let scoreDistributionCounts = fillRange(-3, 3, 0.25);
@@ -304,11 +320,13 @@ const getReviewInfo = file => {
     recommendDistribution: { labels: recommendDistributionLabels, counts: recommendDistributionCounts }
   };
 
-  return { infoType: 'review', infoData: parsedResult };
+  const { uploadDateTime } = parsed;
+  return { infoType: 'review', infoData: parsedResult, uploadDateTime, fileName };
 };
 
-const getSubmissionInfo = file => {
-  const parsedSubmissions = parseSubmission(file);
+const getSubmissionInfo = (file, fileName = 'submission.csv') => {
+  const parsed = parseSubmission(file, fileName);
+  const parsedSubmissions = parsed.submissions;
 
   const acceptedSubs = [];
   const rejectedSubs = [];
@@ -441,7 +459,9 @@ const getSubmissionInfo = file => {
     comparableAcceptanceRate
   };
 
-  return { infoType: 'submission', infoData: parsedResult };
+  const { uploadDateTime } = parsed;
+
+  return { infoType: 'submission', infoData: parsedResult, uploadDateTime, fileName };
 };
 
 export default {
