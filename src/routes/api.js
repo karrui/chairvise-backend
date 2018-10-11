@@ -114,8 +114,10 @@ router.post('/process/:type', (req, res) => {
       result = jsonHelper.getAuthorInfo(data);
       break;
     case PROCESS_TYPES.ALL_REVIEWS:
+      result = jsonHelper.getReviewInfo(data);
       break;
     case PROCESS_TYPES.ALL_SUBMISSIONS:
+      result = jsonHelper.getSubmissionInfo(data);
       break;
     case PROCESS_TYPES.AUTHOR_SUBMISSION:
       break;
