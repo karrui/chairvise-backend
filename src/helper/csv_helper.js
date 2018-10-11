@@ -41,7 +41,6 @@ const parseAuthor = (file, fileName) => {
 
   if (parsedContent.errors.length !== 0) {
     // error handling
-    console.error('parsing has issues:', parsedContent.errors);
     return { error: true };
   }
 
@@ -85,7 +84,6 @@ const parseReview = (file, fileName) => {
   const parsedContent = Papa.parse(content, papaConfig);
   if (parsedContent.errors.length !== 0) {
     // error handling
-    console.error('parsing has issues:', parsedContent.errors);
     return { error: true };
   }
 
@@ -157,7 +155,6 @@ const parseSubmission = (file, fileName) => {
   const parsedContent = Papa.parse(content, papaConfig);
   if (parsedContent.errors.length !== 0) {
     // error handling
-    console.error('parsing has issues:', parsedContent.errors);
     return { error: true };
   }
 
