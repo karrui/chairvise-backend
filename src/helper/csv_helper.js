@@ -237,7 +237,7 @@ const getAuthorInfo = (file, fileName = 'author.csv') => {
   };
 
   const { uploadDateTime } = parsed;
-  return { infoType: 'author', infoData: parsedResult, uploadDateTime, fileName };
+  return { infoType: 'author', infoData: parsedResult, uploadDateTime, fileName, authors: parsedAuthors };
 };
 
 const getReviewInfo = (file, fileName = 'review.csv') => {
@@ -318,7 +318,7 @@ const getReviewInfo = (file, fileName = 'review.csv') => {
   };
 
   const { uploadDateTime } = parsed;
-  return { infoType: 'review', infoData: parsedResult, uploadDateTime, fileName };
+  return { infoType: 'review', infoData: parsedResult, uploadDateTime, fileName, reviews: parsedReviews };
 };
 
 const getSubmissionInfo = (file, fileName = 'submission.csv') => {
@@ -458,7 +458,7 @@ const getSubmissionInfo = (file, fileName = 'submission.csv') => {
 
   const { uploadDateTime } = parsed;
 
-  return { infoType: 'submission', infoData: parsedResult, uploadDateTime, fileName };
+  return { infoType: 'submission', infoData: parsedResult, uploadDateTime, fileName, submissions: parsedSubmissions };
 };
 
 export default {
