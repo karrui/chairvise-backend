@@ -35,6 +35,8 @@ const parseAuthor = (file, fileName) => {
   content =
     'submissionId, firstName, lastName, email, country, organisation, page, personId, corresponding\r' +
     content.substring(content.indexOf('\r') + 1);
+  content = content.replace(new RegExp(/(", )|(," )/g), ', ');
+  content = content.replace(new RegExp(/(", )/g), ', ');
   const parsedContent = Papa.parse(content, papaConfig);
 
   if (parsedContent.errors.length !== 0) {
