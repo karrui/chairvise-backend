@@ -11,89 +11,96 @@ router.get('/', (req, res, next) => {
   res.status(200).json({ message: 'Connected, welcome to the backend server for ChairVise' });
 });
 
-router.post('/upload', upload.single('file'), (req, res) => {
-  const csvFile = req.file;
-  const fileName = csvFile.originalname;
+router.post('/upload', upload.array('file'), (req, res) => {
+  let result = [];
+  const csvFiles = req.files;
   const { fileType } = req.body;
-  let result = null;
 
-  if (fileType) {
-    switch (fileType) {
-      case 'review':
-        result = jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName));
-        break;
-      case 'author':
-        result = jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName));
-        break;
-      case 'submission':
-        result = jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName));
-        break;
-      default:
-        res.sendStatus(422); // unknown file, no api to process
+  csvFiles.map((csvFile, index) => {
+    const fileName = csvFile.originalname;
+    if (fileType && index < fileType.length) {
+      switch (fileType[index]) {
+        case 'review':
+          result.push(jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName)));
+          break;
+        case 'author':
+          result.push(jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName)));
+          break;
+        case 'submission':
+          result.push(jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName)));
+          break;
+        default:
+          res.sendStatus(422); // unknown file, no api to process
+      }
+    } else {
+      switch (fileName) {
+        case 'review.csv':
+          result.push(jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName)));
+          break;
+        case 'author.csv':
+          result.push(jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName)));
+          break;
+        case 'submission.csv':
+          result.push(jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName)));
+          break;
+        default:
+          res.sendStatus(422); // unknown file, no api to process
+      }
     }
-  } else {
-    switch (fileName) {
-      case 'review.csv':
-        result = jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName));
-        break;
-      case 'author.csv':
-        result = jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName));
-        break;
-      case 'submission.csv':
-        result = jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName));
-        break;
-      default:
-        res.sendStatus(422); // unknown file, no api to process
-    }
-  }
-  if (result.error) {
-    res.sendStatus(422);
-  } else {
-    res.status(200).json(result);
-  }
+  });
+
+  let hasError = false;
+  result.map(element => {
+    if (element.error && !hasError) hasError = true;
+  });
+
+  hasError ? res.sendStatus(422) : res.status(200).json(result);
 });
 
-router.post('/uploadv2', upload.single('file'), (req, res) => {
-  const csvFile = req.file;
-  const fileName = csvFile.originalname;
-  let result = null;
+router.post('/uploadv2', upload.array('file'), (req, res) => {
+  let result = [];
+  const csvFiles = req.files;
   const { fileType } = req.body;
 
-  if (fileType) {
-    switch (fileType) {
-      case 'review':
-        result = csvHelper.parseReview(csvFile, fileName);
-        break;
-      case 'author':
-        result = csvHelper.parseAuthor(csvFile, fileName);
-        break;
-      case 'submission':
-        result = csvHelper.parseSubmission(csvFile, fileName);
-        break;
-      default:
-        res.sendStatus(422); // unknown file, no api to process
+  csvFiles.map((csvFile, index) => {
+    const fileName = csvFile.originalname;
+    if (fileType && index < fileType.length) {
+      switch (fileType[index]) {
+        case 'review':
+          result.push(csvHelper.parseReview(csvFile, fileName));
+          break;
+        case 'author':
+          result.push(csvHelper.parseAuthor(csvFile, fileName));
+          break;
+        case 'submission':
+          result.push(csvHelper.parseSubmission(csvFile, fileName));
+          break;
+        default:
+          res.sendStatus(422); // unknown file, no api to process
+      }
+    } else {
+      switch (fileName) {
+        case 'review.csv':
+          result.push(csvHelper.parseReview(csvFile, fileName));
+          break;
+        case 'author.csv':
+          result.push(csvHelper.parseAuthor(csvFile, fileName));
+          break;
+        case 'submission.csv':
+          result.push(csvHelper.parseSubmission(csvFile, fileName));
+          break;
+        default:
+          res.sendStatus(422); // unknown file, no api to process
+      }
     }
-  } else {
-    switch (fileName) {
-      case 'review.csv':
-        result = csvHelper.parseReview(csvFile, fileName);
-        break;
-      case 'author.csv':
-        result = csvHelper.parseAuthor(csvFile, fileName);
-        break;
-      case 'submission.csv':
-        result = csvHelper.parseSubmission(csvFile, fileName);
-        break;
-      default:
-        res.sendStatus(422); // unknown file, no api to process
-    }
-  }
+  });
 
-  if (result.error) {
-    res.sendStatus(422);
-  } else {
-    res.status(200).json(result);
-  }
+  let hasError = false;
+  result.map(element => {
+    if (element.error && !hasError) hasError = true;
+  });
+
+  hasError ? res.sendStatus(422) : res.status(200).json(result);
 });
 
 const PROCESS_TYPES = {
