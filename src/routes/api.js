@@ -127,16 +127,23 @@ router.post('/process/:type', (req, res) => {
       result = jsonHelper.getSubmissionInfo(data);
       break;
     case PROCESS_TYPES.AUTHOR_SUBMISSION:
+      result = jsonHelper.getAuthorSubmissionInfo(data);
       break;
     case PROCESS_TYPES.REVIEW_SUBMISSION:
+      result = jsonHelper.getReviewSubmissionInfo(data);
       break;
     case PROCESS_TYPES.AUTHOR_REVIEW:
+      result = jsonHelper.getAuthorReviewInfo(data);
       break;
     default:
       res.sendStatus(422); // unknown file, no api to process
   }
 
-  res.status(200).json(result);
+  if (result.error) {
+    res.sendStatus(422); // unknown file, no api to process
+  } else {
+    res.status(200).json(result);
+  }
 });
 
 export default router;

@@ -265,8 +265,23 @@ const getSubmissionInfo = submissionJson => {
   return { infoType: 'submission', infoData: parsedResult, timeProcessed: new Date(), fileName, submissions };
 };
 
+const getAuthorSubmissionInfo = combinedJson => {
+  return combinedJson;
+};
+
+const getReviewSubmissionInfo = combinedJson => {
+  return combinedJson;
+};
+
+const getAuthorReviewInfo = combinedJson => {
+  return combinedJson;
+};
+
 export default {
   getAuthorInfo,
   getReviewInfo,
-  getSubmissionInfo
+  getSubmissionInfo,
+  getAuthorSubmissionInfo,
+  getReviewSubmissionInfo,
+  getAuthorReviewInfo
 };
