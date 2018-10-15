@@ -266,7 +266,57 @@ const getSubmissionInfo = submissionJson => {
 };
 
 const getAuthorSubmissionInfo = combinedJson => {
-  return combinedJson;
+  // info to visualize:
+  // submissions per country -- top countries
+  // acceptance rate by country
+  // accepted keywords by country
+  // acceptance rate by affiliation
+
+  const subsGroupByCountry = _.mapValues(_.groupBy(combinedJson, 'country'));
+  const subsCountByCountry = {};
+  const acceptanceRateByCountry = {};
+  const acceptedKeywordsByCountry = {};
+  const acceptedKeywordsCountByCountry = {};
+  const keywordsByCountry = {};
+  const keywordsCountByCountry = {};
+  for (const country in subsGroupByCountry) {
+    let acceptanceCount = 0;
+    const uniqBySubId = _.uniqBy(subsGroupByCountry[country], 'submissionId');
+    subsCountByCountry[country] = uniqBySubId.length;
+    uniqBySubId.map(submission => {
+      if (submission.decision === 'accept') {
+        if (!acceptedKeywordsByCountry[country]) {
+          acceptedKeywordsByCountry[country] = [];
+        }
+        acceptedKeywordsByCountry[country].push(...submission.keywords);
+        acceptanceCount++;
+      }
+      if (!keywordsByCountry[country]) {
+        keywordsByCountry[country] = [];
+      }
+      keywordsByCountry[country].push(...submission.keywords);
+    });
+    acceptanceRateByCountry[country] = acceptanceCount / subsCountByCountry[country];
+    acceptedKeywordsCountByCountry[country] = util.getSortedArrayFromMapUsingCount(_.countBy(acceptedKeywordsByCountry[country]));
+    keywordsCountByCountry[country] = util.getSortedArrayFromMapUsingCount(_.countBy(keywordsByCountry[country]));
+  }
+
+  const subsGroupByAffiliation = _.mapValues(_.groupBy(combinedJson, 'organisation'));
+  const subsCountByAffiliation = {};
+  const acceptanceRateByAffiliation = {};
+  for (const affiliation in subsGroupByAffiliation) {
+    let acceptanceCount = 0;
+    const uniqBySubId = _.uniqBy(subsGroupByAffiliation[affiliation], 'submissionId');
+    subsCountByAffiliation[affiliation] = uniqBySubId.length;
+    uniqBySubId.map(submission => {
+      if (submission.decision === 'accept') {
+        acceptanceCount++;
+      }
+    });
+    acceptanceRateByAffiliation[affiliation] = acceptanceCount / subsCountByAffiliation[affiliation];
+  }
+
+  return { keywordsCountByCountry, acceptedKeywordsCountByCountry, subsCountByCountry, acceptanceRateByCountry, subsCountByAffiliation, acceptanceRateByAffiliation };
 };
 
 const getReviewSubmissionInfo = combinedJson => {

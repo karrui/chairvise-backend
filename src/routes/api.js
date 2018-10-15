@@ -104,12 +104,12 @@ router.post('/uploadv2', upload.array('file'), (req, res) => {
 });
 
 const PROCESS_TYPES = {
-  ALL_AUTHORS: 'allAuthors',
-  ALL_REVIEWS: 'allReviews',
-  ALL_SUBMISSIONS: 'allSubmissions',
-  REVIEW_SUBMISSION: 'reviewSubmission',
-  AUTHOR_REVIEW: 'authorReview',
-  AUTHOR_SUBMISSION: 'authorSubmission'
+  ALL_AUTHORS: 'all_authors',
+  ALL_REVIEWS: 'all_reviews',
+  ALL_SUBMISSIONS: 'all_submissions',
+  REVIEW_SUBMISSION: 'review_submission',
+  AUTHOR_REVIEW: 'author_review',
+  AUTHOR_SUBMISSION: 'author_submission'
 };
 
 router.post('/process/:type', (req, res) => {
