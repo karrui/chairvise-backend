@@ -316,7 +316,16 @@ const getAuthorSubmissionInfo = combinedJson => {
     acceptanceRateByAffiliation[affiliation] = acceptanceCount / subsCountByAffiliation[affiliation];
   }
 
-  return { keywordsCountByCountry, acceptedKeywordsCountByCountry, subsCountByCountry, acceptanceRateByCountry, subsCountByAffiliation, acceptanceRateByAffiliation };
+  const parsedResult = {
+    keywordsCountByCountry,
+    acceptedKeywordsCountByCountry,
+    subsCountByCountry,
+    acceptanceRateByCountry,
+    subsCountByAffiliation,
+    acceptanceRateByAffiliation
+  };
+
+  return { infoType: 'author_submission', infoData: parsedResult, timeProcessed: new Date(), fileName: 'author_submissions' };
 };
 
 const getReviewSubmissionInfo = combinedJson => {
