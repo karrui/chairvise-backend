@@ -7,8 +7,8 @@ const getAuthorInfo = authorJson => {
   const authorNames = [];
   const countries = [];
   const organisations = [];
-  authors.map(author => {
-    const { firstName, lastName, country, organisation } = author;
+  Object.keys(authors).map(key => {
+    const { firstName, lastName, country, organisation } = authors[key];
     const name = firstName + ' ' + lastName;
     authorList.push({ name, country, organisation });
     authorNames.push(name);
@@ -74,11 +74,13 @@ const getReviewInfo = reviewJson => {
   scoreDistributionCounts = setArrayValuesToZero(scoreDistributionCounts);
   recommendDistributionCounts = setArrayValuesToZero(recommendDistributionCounts);
 
+  const reviewsList = _.values(reviews);
+
   const confidenceList = [];
   const recommendList = [];
   const scoreList = [];
   const submissionIDReviewMap = {};
-  const reviewsGroupBySubmissionId = _.mapValues(_.groupBy(reviews, 'submissionId'));
+  const reviewsGroupBySubmissionId = _.mapValues(_.groupBy(reviewsList, 'submissionId'));
   for (const submissionId in reviewsGroupBySubmissionId) {
     const scores = [];
     const confidences = [];
@@ -140,8 +142,9 @@ const getSubmissionInfo = submissionJson => {
   const allKeywords = [];
   const trackNames = [];
   const acceptedAuthorNames = [];
+  const submissionsList = _.values(submissions);
 
-  submissions.map(submission => {
+  submissionsList.map(submission => {
     if (submission.decision === 'reject') {
       rejectedSubs.push(submission);
       rejectedKeywords.push(...submission.keywords);
@@ -178,7 +181,7 @@ const getSubmissionInfo = submissionJson => {
   const rejectedKeywordList = util.getSortedArrayFromMapUsingCount(rejectedKeywordMap);
   const overallKeywordList = util.getSortedArrayFromMapUsingCount(overallKeywordMap);
 
-  const acceptanceRate = acceptedSubs.length / submissions.length;
+  const acceptanceRate = acceptedSubs.length / submissionsList.length;
   const subTimeCounts = _.countBy(submissionTimes);
   const updateTimeCounts = _.countBy(lastUpdateTimes);
 
@@ -200,7 +203,7 @@ const getSubmissionInfo = submissionJson => {
   });
 
   // do grouping analysis
-  const paperGroupByTrackName = _.mapValues(_.groupBy(submissions, 'trackName'));
+  const paperGroupByTrackName = _.mapValues(_.groupBy(submissionsList, 'trackName'));
 
   // Obtained from the JCDL.org website: past conferences
   const comparableAcceptanceRate = {
@@ -224,7 +227,7 @@ const getSubmissionInfo = submissionJson => {
       }
     });
     const countedCurrentGroupKeywords = _.countBy(currentGroupKeywords);
-    keywordsByTrack[paperGroup] = util.getSortedArrayFromMapUsingCount(countedCurrentGroupKeywords);
+    keywordsByTrack[paperGroup] = countedCurrentGroupKeywords;
     const acceptedAuthorsThisTrackCount = _.countBy(acceptedAuthorsThisTrack);
     const authorNamesThisTrack = [];
     const authorCountsThisTrack = [];
@@ -248,11 +251,11 @@ const getSubmissionInfo = submissionJson => {
   const parsedResult = {
     acceptanceRate,
     overallKeywordMap,
-    overallKeywordList,
+    // overallKeywordList
     acceptedKeywordMap,
-    acceptedKeywordList,
+    // acceptedKeywordList,
     rejectedKeywordMap,
-    rejectedKeywordList,
+    // rejectedKeywordList,
     keywordsByTrack,
     acceptanceRateByTrack,
     topAcceptedAuthors: topAcceptedAuthorsMap,

@@ -47,8 +47,14 @@ const parseAuthor = (file, fileName) => {
   // eslint-disable-next-line
   parsedContent.data.map(author => author.corresponding = author.corresponding === 'yes');
 
+  const formattedContent = {};
+  parsedContent.data.forEach(author => {
+    const { personId } = author;
+    formattedContent[personId] = author;
+  });
+
   return {
-    authors: parsedContent.data,
+    authors: formattedContent,
     fileName: fileName || 'author.csv'
   };
 };
@@ -86,7 +92,7 @@ const parseReview = (file, fileName) => {
     return { error: true };
   }
 
-  const formattedContent = [];
+  const formattedContent = {};
 
   parsedContent.data.forEach(review => {
     const { reviewId, submissionId, reviewerId, reviewerName, expertiseLevel, reviewComments, scores, overallScore, date, time } = review;
@@ -97,7 +103,7 @@ const parseReview = (file, fileName) => {
       confidence: parseInt(evaluation[1].split(': ')[1]),
       recommendForBestPaper
     };
-    formattedContent.push({
+    formattedContent[reviewId] = {
       reviewId,
       submissionId,
       reviewerId,
@@ -109,7 +115,7 @@ const parseReview = (file, fileName) => {
       date,
       time,
       isRecommended: scoreObject.recommendForBestPaper
-    });
+    };
   });
 
   return {
@@ -156,7 +162,7 @@ const parseSubmission = (file, fileName) => {
     return { error: true };
   }
 
-  const formattedData = [];
+  const formattedData = {};
 
   parsedContent.data.forEach(submission => {
     const { submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, keywords, decision, notified, reviewsSent, abstract } = submission;
@@ -164,7 +170,7 @@ const parseSubmission = (file, fileName) => {
     const authorList = authors.replace(' and ', ',').split(',').map(x => x.trim());
     const keywordList = keywords.split(/[\r\n]+/).map(x => x.toLowerCase());
 
-    formattedData.push({
+    formattedData[submissionId] = {
       submissionId,
       trackId,
       trackName,
@@ -177,7 +183,7 @@ const parseSubmission = (file, fileName) => {
       isNotified: notified === 'yes',
       isReviewSent: reviewsSent === 'yes',
       abstract
-    });
+    };
   });
   return {
     submissions: formattedData,
