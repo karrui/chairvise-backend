@@ -7,16 +7,31 @@ const getAuthorInfo = authorJson => {
   const authorNames = [];
   const countries = [];
   const organisations = [];
+  const authorCounts = {};
+  const subToOrgNames = {};
   Object.keys(authors).map(key => {
-    const { firstName, lastName, country, organisation } = authors[key];
+    const { firstName, lastName, country, submissions } = authors[key];
     const name = firstName + ' ' + lastName;
-    authorList.push({ name, country, organisation });
+    authorList.push({ name, country });
     authorNames.push(name);
-    countries.push(country);
-    organisations.push(organisation);
+    const uniqOrgNames = [];
+    submissions.map(sub => {
+      // push a country into each submission author made
+      countries.push(country);
+      if (subToOrgNames[sub.submissionId]) {
+        subToOrgNames[sub.submissionId].push(sub.organisation);
+      } else {
+        subToOrgNames[sub.submissionId] = [sub.organisation];
+      }
+    });
+    organisations.push(..._.uniq(uniqOrgNames));
+
+    authorCounts[name] = Object.keys(submissions).length;
   });
 
-  const authorCounts = _.countBy(authorNames);
+  Object.keys(subToOrgNames).map(key => {
+    organisations.push(..._.uniq(subToOrgNames[key]));
+  });
   const countryCounts = _.countBy(countries);
   const affiliationCounts = _.countBy(organisations);
 
@@ -176,10 +191,6 @@ const getSubmissionInfo = submissionJson => {
   const acceptedKeywordMap = _.countBy(acceptedKeywords);
   const rejectedKeywordMap = _.countBy(rejectedKeywords);
   const overallKeywordMap = _.countBy(allKeywords);
-
-  const acceptedKeywordList = util.getSortedArrayFromMapUsingCount(acceptedKeywordMap);
-  const rejectedKeywordList = util.getSortedArrayFromMapUsingCount(rejectedKeywordMap);
-  const overallKeywordList = util.getSortedArrayFromMapUsingCount(overallKeywordMap);
 
   const acceptanceRate = acceptedSubs.length / submissionsList.length;
   const subTimeCounts = _.countBy(submissionTimes);

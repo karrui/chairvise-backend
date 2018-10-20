@@ -47,14 +47,26 @@ const parseAuthor = (file, fileName) => {
   // eslint-disable-next-line
   parsedContent.data.map(author => author.corresponding = author.corresponding === 'yes');
 
-  const formattedContent = {};
+  const formattedAuthorContent = {};
   parsedContent.data.forEach(author => {
-    const { personId } = author;
-    formattedContent[personId] = author;
+    const { submissionId, firstName, lastName, email, country, organisation, page, personId, corresponding } = author;
+    // already exists
+    if (formattedAuthorContent[personId]) {
+      formattedAuthorContent[personId].submissions.push({ submissionId, organisation, email, corresponding });
+    } else {
+      formattedAuthorContent[personId] = {
+        firstName,
+        lastName,
+        country,
+        page,
+        personId,
+        submissions: [{ submissionId, organisation, email, corresponding }]
+      };
+    }
   });
 
   return {
-    authors: formattedContent,
+    authors: formattedAuthorContent,
     fileName: fileName || 'author.csv'
   };
 };
