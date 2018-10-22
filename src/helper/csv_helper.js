@@ -147,7 +147,6 @@ const parseReview = (file, fileName) => {
  * @property {string} decision Can be "accept", "reject", or "no decision"
  * @property {boolean} isNotified Whether the acceptance/rejection mail were sent to authors
  * @property {boolean} isReviewSent Whether the review was sent in the mails
- * @property {string} abstract The abstract of the submission
  */
 
 /**
@@ -175,7 +174,7 @@ const parseSubmission = (file, fileName) => {
   const formattedData = {};
 
   parsedContent.data.forEach(submission => {
-    const { submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, keywords, decision, notified, reviewsSent, abstract } = submission;
+    const { submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, keywords, decision, notified, reviewsSent } = submission;
 
     const authorList = authors.replace(' and ', ',').split(',').map(x => x.trim());
     const keywordList = keywords.split(/[\r\n]+/).map(x => x.toLowerCase());
@@ -191,8 +190,7 @@ const parseSubmission = (file, fileName) => {
       keywords: keywordList,
       decision,
       isNotified: notified === 'yes',
-      isReviewSent: reviewsSent === 'yes',
-      abstract
+      isReviewSent: reviewsSent === 'yes'
     };
   });
   return {
