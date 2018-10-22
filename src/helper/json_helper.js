@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import util, { fillRange, sum, setArrayValuesToZero } from './util';
+import util, { fillRange, sum, setArrayValuesToZero, capitalize } from './util';
 
 const getAuthorInfo = authorJson => {
   const { authors, fileName } = authorJson;
@@ -365,8 +365,55 @@ const getReviewSubmissionInfo = combinedJson => {
   return combinedJson;
 };
 
+// helper method for getAuthorReviewInfo to calculate total score by the category provided
+const getScoresAndRecommendsByCategory = (combinedJson, category) => {
+  const subsGroupByCategory = _.mapValues(_.groupBy(combinedJson, category));
+  const scoresByCategory = {};
+  const recommendsByCategory = {};
+  Object.keys(subsGroupByCategory).map(category => {
+    let totalScore = 0;
+    let totalRecommends = 0;
+    subsGroupByCategory[category].map(review => {
+      const { scores, expertiseLevel, isRecommended } = review;
+      totalScore += scores.confidence * scores.overallEvaluation * expertiseLevel;
+
+      if (isRecommended) {
+        totalRecommends++;
+      }
+    });
+
+    // divide total score by number of reviews
+    scoresByCategory[category] = totalScore / subsGroupByCategory[category].length;
+    recommendsByCategory[category] = totalRecommends / subsGroupByCategory[category].length;
+  });
+  const scoreKey = `scoresBy${capitalize(category)}`;
+  const recommendsKey = `recommendsBy${capitalize(category)}`;
+  return {
+    [scoreKey]: scoresByCategory,
+    [recommendsKey]: recommendsByCategory
+  };
+};
+
 const getAuthorReviewInfo = combinedJson => {
-  return combinedJson;
+  // topAuthorsbyScore
+  // topCountriesByScore
+  // topOrganizationsByScore
+  // mostRecommendedSubmission
+  // mostRecommendedAuthor
+  const { scoresByName, recommendsByName } = getScoresAndRecommendsByCategory(combinedJson, 'name');
+  const { scoresByCountry, recommendsByCountry } = getScoresAndRecommendsByCategory(combinedJson, 'country');
+  const { scoresByOrganisation, recommendsByOrganisation } = getScoresAndRecommendsByCategory(combinedJson, 'organisation');
+
+  const parsedResult = {
+    scoresByName,
+    recommendsByName,
+    scoresByCountry,
+    recommendsByCountry,
+    scoresByOrganisation,
+    recommendsByOrganisation
+  };
+
+  return { infoType: 'author_review', infoData: parsedResult, timeProcessed: new Date(), fileName: 'author_review' };
 };
 
 export default {

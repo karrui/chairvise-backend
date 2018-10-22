@@ -31,6 +31,8 @@ export const setArrayValuesToZero = array => array.map(x => 0);
 
 export const sum = (a, b) => a + b;
 
+export const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
+
 export default {
   getSortedArrayFromMapUsingCount,
   getSortedArrayFromMapUsingKey,
