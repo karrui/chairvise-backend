@@ -287,16 +287,20 @@ const getAuthorSubmissionInfo = combinedJson => {
   // acceptance rate by affiliation
 
   const subsGroupByCountry = _.mapValues(_.groupBy(combinedJson, 'country'));
-  const subsCountByCountry = [];
-  const acceptanceRateByCountry = [];
+  const subsCountByCountry = {};
+  const acceptanceRateByCountry = {};
   const acceptedKeywordsByCountry = {};
   const acceptedKeywordsCountByCountry = {};
+  const rejectionRateByCountry = {};
+  const rejectedKeywordsByCountry = {};
+  const rejectedKeywordsCountByCountry = {};
   const keywordsByCountry = {};
   const keywordsCountByCountry = {};
   for (const country in subsGroupByCountry) {
     let acceptanceCount = 0;
+    let rejectionCount = 0;
     const uniqBySubId = _.uniqBy(subsGroupByCountry[country], 'submissionId');
-    subsCountByCountry.push([country, uniqBySubId.length]);
+    subsCountByCountry[country] = uniqBySubId.length;
     uniqBySubId.map(submission => {
       if (submission.decision === 'accept') {
         if (!acceptedKeywordsByCountry[country]) {
@@ -304,46 +308,55 @@ const getAuthorSubmissionInfo = combinedJson => {
         }
         acceptedKeywordsByCountry[country].push(...submission.keywords);
         acceptanceCount++;
+      } else if (submission.decision === 'reject') {
+        if (!rejectedKeywordsByCountry[country]) {
+          rejectedKeywordsByCountry[country] = [];
+        }
+        rejectedKeywordsByCountry[country].push(...submission.keywords);
+        rejectionCount++;
       }
       if (!keywordsByCountry[country]) {
         keywordsByCountry[country] = [];
       }
       keywordsByCountry[country].push(...submission.keywords);
     });
-    acceptanceRateByCountry.push([country, (acceptanceCount / uniqBySubId.length)]);
-    acceptedKeywordsCountByCountry[country] = util.getSortedArrayFromMapUsingCount(_.countBy(acceptedKeywordsByCountry[country]));
-    keywordsCountByCountry[country] = util.getSortedArrayFromMapUsingCount(_.countBy(keywordsByCountry[country]));
+    acceptanceRateByCountry[country] = (acceptanceCount / uniqBySubId.length);
+    acceptedKeywordsCountByCountry[country] = _.countBy(acceptedKeywordsByCountry[country]);
+    rejectionRateByCountry[country] = (rejectionCount / uniqBySubId.length);
+    rejectedKeywordsCountByCountry[country] = _.countBy(rejectedKeywordsByCountry[country]);
+    keywordsCountByCountry[country] = _.countBy(keywordsByCountry[country]);
   }
 
-  // sort subCountByCountry, acceptanceRateByCountry
-  subsCountByCountry.sort((a, b) => b[1] > a[1] ? 1 : -1);
-  acceptanceRateByCountry.sort((a, b) => b[1] > a[1] ? 1 : -1);
-
   const subsGroupByAffiliation = _.mapValues(_.groupBy(combinedJson, 'organisation'));
-  const subsCountByAffiliation = [];
-  const acceptanceRateByAffiliation = [];
+  const subsCountByAffiliation = {};
+  const acceptanceRateByAffiliation = {};
+  const rejectionRateByAffiliation = {};
   for (const affiliation in subsGroupByAffiliation) {
     let acceptanceCount = 0;
+    let rejectionCount = 0;
     const uniqBySubId = _.uniqBy(subsGroupByAffiliation[affiliation], 'submissionId');
-    subsCountByAffiliation.push([affiliation, uniqBySubId.length]);
+    subsCountByAffiliation[affiliation] = uniqBySubId.length;
     uniqBySubId.map(submission => {
       if (submission.decision === 'accept') {
         acceptanceCount++;
+      } else if (submission.decision === 'reject') {
+        rejectionCount++;
       }
     });
-    acceptanceRateByAffiliation.push([affiliation, (acceptanceCount / uniqBySubId.length)]);
+    acceptanceRateByAffiliation[affiliation] = acceptanceCount / uniqBySubId.length;
+    rejectionRateByAffiliation[affiliation] = rejectionCount / uniqBySubId.length;
   }
-
-  subsCountByAffiliation.sort((a, b) => b[1] > a[1] ? 1 : -1);
-  acceptanceRateByAffiliation.sort((a, b) => b[1] > a[1] ? 1 : -1);
 
   const parsedResult = {
     keywordsCountByCountry,
-    acceptedKeywordsCountByCountry,
     subsCountByCountry,
-    acceptanceRateByCountry,
     subsCountByAffiliation,
-    acceptanceRateByAffiliation
+    acceptedKeywordsCountByCountry,
+    acceptanceRateByCountry,
+    rejectedKeywordsCountByCountry,
+    rejectionRateByCountry,
+    acceptanceRateByAffiliation,
+    rejectionRateByAffiliation
   };
 
   return { infoType: 'author_submission', infoData: parsedResult, timeProcessed: new Date(), fileName: 'author_submissions' };
