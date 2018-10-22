@@ -362,14 +362,42 @@ const getAuthorSubmissionInfo = combinedJson => {
 };
 
 const getReviewSubmissionInfo = combinedJson => {
-  return combinedJson;
+  const scoresByKeywords = {};
+  combinedJson.map(row => {
+    const { keywords, scores } = row;
+    keywords.map(keyword => {
+      if (!scoresByKeywords[keyword]) {
+        scoresByKeywords[keyword] = 0;
+      }
+      scoresByKeywords[keyword] += scores.overallEvaluation * scores.confidence;
+    });
+  });
+
+  const {
+    scoresByTrackName,
+    recommendsByTrackName,
+    reviewCountByTrackName
+  } = getScoresAndRecommendsByCategory(combinedJson, 'trackName');
+  const { recommendsByReviewerName, reviewCountByReviewerName } = getScoresAndRecommendsByCategory(combinedJson, 'reviewerName');
+
+  const parsedResult = {
+    scoresByKeywords,
+    scoresByTrackName,
+    recommendsByTrackName,
+    reviewCountByTrackName,
+    recommendsByReviewerName,
+    reviewCountByReviewerName
+  };
+
+  return { infoType: 'review_submission', infoData: parsedResult, timeProcessed: new Date(), fileName: 'review_submission' };
 };
 
-// helper method for getAuthorReviewInfo to calculate total score by the category provided
+// helper method for getAuthorReviewInfo to calculate total score and total recommends by the category provided
 const getScoresAndRecommendsByCategory = (combinedJson, category) => {
   const subsGroupByCategory = _.mapValues(_.groupBy(combinedJson, category));
   const scoresByCategory = {};
   const recommendsByCategory = {};
+  const reviewCountByCategory = {};
   Object.keys(subsGroupByCategory).map(category => {
     let totalScore = 0;
     let totalRecommends = 0;
@@ -382,15 +410,19 @@ const getScoresAndRecommendsByCategory = (combinedJson, category) => {
       }
     });
 
+    const reviewCount = subsGroupByCategory[category].length;
     // divide total score by number of reviews
-    scoresByCategory[category] = totalScore / subsGroupByCategory[category].length;
-    recommendsByCategory[category] = totalRecommends / subsGroupByCategory[category].length;
+    scoresByCategory[category] = totalScore / reviewCount;
+    recommendsByCategory[category] = totalRecommends / reviewCount;
+    reviewCountByCategory[category] = reviewCount;
   });
   const scoreKey = `scoresBy${capitalize(category)}`;
   const recommendsKey = `recommendsBy${capitalize(category)}`;
+  const reviewCountKey = `reviewCountBy${capitalize(category)}`;
   return {
     [scoreKey]: scoresByCategory,
-    [recommendsKey]: recommendsByCategory
+    [recommendsKey]: recommendsByCategory,
+    [reviewCountKey]: reviewCountByCategory
   };
 };
 
