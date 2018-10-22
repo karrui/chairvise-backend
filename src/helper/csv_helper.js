@@ -107,7 +107,7 @@ const parseReview = (file, fileName) => {
   const formattedContent = {};
 
   parsedContent.data.forEach(review => {
-    const { reviewId, submissionId, reviewerId, reviewerName, expertiseLevel, reviewComments, scores, overallScore, date, time } = review;
+    const { reviewId, submissionId, reviewerId, reviewerName, expertiseLevel, scores, overallScore, date, time } = review;
     const evaluation = scores.split(/[\r\n]+/);
     const recommendForBestPaper = evaluation.length > 2 && evaluation[2].split(': ')[1] === 'yes';
     const scoreObject = {
@@ -121,7 +121,6 @@ const parseReview = (file, fileName) => {
       reviewerId,
       reviewerName,
       expertiseLevel,
-      reviewComments,
       scores: scoreObject,
       overallScore,
       date,
