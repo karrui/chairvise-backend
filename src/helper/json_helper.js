@@ -10,8 +10,7 @@ const getAuthorInfo = authorJson => {
   const authorCounts = {};
   const subToOrgNames = {};
   Object.keys(authors).map(key => {
-    const { firstName, lastName, country, submissions } = authors[key];
-    const name = firstName + ' ' + lastName;
+    const { name, country, submissions } = authors[key];
     authorList.push({ name, country });
     authorNames.push(name);
     const uniqOrgNames = [];

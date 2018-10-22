@@ -10,8 +10,7 @@ const papaConfig = {
 /**
  * @typedef {Object} author
  * @property {number} submissionId The submissionId of the author
- * @property {string} firstName The first name of the author
- * @property {string} lastName The last name of the author
+ * @property {string} name The first and last name of the author
  * @property {string} email The email of the author
  * @property {string} country The country of the author
  * @property {string} organisation The organization the author belongs to
@@ -55,8 +54,7 @@ const parseAuthor = (file, fileName) => {
       formattedAuthorContent[personId].submissions.push({ submissionId, organisation, email, corresponding });
     } else {
       formattedAuthorContent[personId] = {
-        firstName,
-        lastName,
+        name: firstName + ' ' + lastName,
         country,
         page,
         personId,
@@ -78,7 +76,6 @@ const parseAuthor = (file, fileName) => {
  * @property {number} reviewerId The id of the reviewer
  * @property {string} reviewerName The name of the reviewer
  * @property {number} expertiseLevel The expertise level of the reviewer -- 5: expert, 1: passing knowledge
- * @property {string} reviewComments The comments left by the reviewer
  * @property {Object} scores The review scores
  * @property {number} overallScore The overall score of the review
  * @property {string} date The date of the review
