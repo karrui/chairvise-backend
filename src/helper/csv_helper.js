@@ -55,6 +55,8 @@ const parseAuthor = (file, fileName) => {
     } else {
       formattedAuthorContent[personId] = {
         name: firstName + ' ' + lastName,
+        firstName,
+        lastName,
         country,
         page,
         personId,
