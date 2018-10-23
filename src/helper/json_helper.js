@@ -380,13 +380,19 @@ const getReviewSubmissionInfo = combinedJson => {
   } = getScoresAndRecommendsByCategory(combinedJson, 'trackName');
   const { recommendsByReviewerName, reviewCountByReviewerName } = getScoresAndRecommendsByCategory(combinedJson, 'reviewerName');
 
+  const { timeSeriesByScore, lastEditSeriesByScore } = getScoreTimeseries(combinedJson);
+
+  console.log(timeSeriesByScore);
+
   const parsedResult = {
     scoresByKeywords,
     scoresByTrackName,
     recommendsByTrackName,
     reviewCountByTrackName,
     recommendsByReviewerName,
-    reviewCountByReviewerName
+    reviewCountByReviewerName,
+    timeSeriesByScore,
+    lastEditSeriesByScore
   };
 
   return { infoType: 'review_submission', infoData: parsedResult, timeProcessed: new Date(), fileName: 'review_submission' };
@@ -424,6 +430,48 @@ const getScoresAndRecommendsByCategory = (combinedJson, category) => {
     [recommendsKey]: recommendsByCategory,
     [reviewCountKey]: reviewCountByCategory
   };
+};
+
+const getScoreTimeseries = (combinedJson) => {
+  const submissionData = {};
+  const lastEditData = {};
+
+  combinedJson.map(row => {
+    const { submitTime, lastUpdateTime, scores } = row;
+
+    var submitDate = submitTime.split(' ')[0];
+    var lastEditDate = lastUpdateTime.split(' ')[0];
+
+    if (!submissionData[submitDate]) {
+      submissionData[submitDate] = { totalScore: 0, count: 0 };
+    }
+    if (!lastEditData[lastEditDate]) {
+      lastEditData[lastEditDate] = { totalScore: 0, count: 0 };
+    }
+
+    var newSubScore = submissionData[submitDate].totalScore + (scores.overallEvaluation * scores.confidence);
+    var newSubCount = submissionData[submitDate].count + 1;
+    var newEditScore = lastEditData[lastEditDate].totalScore + (scores.overallEvaluation * scores.confidence);
+    var newEditCount = lastEditData[lastEditDate].count + 1;
+
+    submissionData[submitDate].totalScore = newSubScore;
+    submissionData[submitDate].count = newSubCount;
+    lastEditData[lastEditDate].totalScore = newEditScore;
+    lastEditData[lastEditDate].count = newEditCount;
+  });
+
+  const timeList = [];
+  const lastEditList = [];
+  util.getSortedArrayFromMapUsingKey(submissionData).map(row => {
+    timeList.push({ x: row[0], y: row[1].totalScore / row[1].count });
+  }
+  );
+  util.getSortedArrayFromMapUsingKey(lastEditData).map(row => {
+    lastEditList.push({ x: row[0], y: row[1].totalScore / row[1].count });
+  }
+  );
+
+  return { timeSeriesByScore: timeList, lastEditSeriesByScore: lastEditList };
 };
 
 const getAuthorReviewInfo = combinedJson => {
