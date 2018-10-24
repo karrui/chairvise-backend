@@ -459,11 +459,22 @@ const getScoreTimeseries = combinedJson => {
   const submissionData = {};
   const lastEditData = {};
 
-  combinedJson.map(row => {
-    const { submitTime, lastUpdateTime, scores } = row;
+  const reviewsGroupBySubmissionId = _.mapValues(_.groupBy(combinedJson, 'submissionId'));
 
-    var submitDate = submitTime.split(' ')[0];
-    var lastEditDate = lastUpdateTime.split(' ')[0];
+  for (const submissionId in reviewsGroupBySubmissionId) {
+    const weightedScores = [];
+    const confidenceSum = [];
+
+    reviewsGroupBySubmissionId[submissionId].map(review => {
+      const { overallEvaluation, confidence } = review.scores;
+      weightedScores.push(overallEvaluation * confidence);
+      confidenceSum.push(confidence);
+    });
+
+    const overallWeightedScore = (weightedScores.reduce(sum) / weightedScores.length) / confidenceSum.reduce(sum);
+    console.log(overallWeightedScore);
+    const submitDate = reviewsGroupBySubmissionId[submissionId][0].submitTime.split(' ')[0];
+    const lastEditDate = reviewsGroupBySubmissionId[submissionId][0].lastUpdateTime.split(' ')[0];
 
     if (!submissionData[submitDate]) {
       submissionData[submitDate] = { totalScore: 0, count: 0 };
@@ -472,16 +483,16 @@ const getScoreTimeseries = combinedJson => {
       lastEditData[lastEditDate] = { totalScore: 0, count: 0 };
     }
 
-    var newSubScore = submissionData[submitDate].totalScore + (scores.overallEvaluation * scores.confidence);
+    var newSubScore = submissionData[submitDate].totalScore + overallWeightedScore;
     var newSubCount = submissionData[submitDate].count + 1;
-    var newEditScore = lastEditData[lastEditDate].totalScore + (scores.overallEvaluation * scores.confidence);
+    var newEditScore = lastEditData[lastEditDate].totalScore + overallWeightedScore;
     var newEditCount = lastEditData[lastEditDate].count + 1;
 
     submissionData[submitDate].totalScore = newSubScore;
     submissionData[submitDate].count = newSubCount;
     lastEditData[lastEditDate].totalScore = newEditScore;
     lastEditData[lastEditDate].count = newEditCount;
-  });
+  }
 
   const timeList = [];
   const lastEditList = [];
