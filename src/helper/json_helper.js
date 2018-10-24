@@ -382,7 +382,18 @@ const getReviewSubmissionInfo = combinedJson => {
 
   const { timeSeriesByScore, lastEditSeriesByScore } = getScoreTimeseries(combinedJson);
 
-  console.log(timeSeriesByScore);
+  const { acceptedMeanScore,
+    acceptedMeanConfidence,
+    acceptedMeanRecommend,
+    rejectedMeanScore,
+    rejectedMeanConfidence,
+    rejectedMeanRecommend,
+    acceptedMinScore,
+    rejectedMaxScore,
+    acceptedScoreDistribution,
+    acceptedRecommendDistribution,
+    rejectedScoreDistribution,
+    rejectedRecommendDistribution } = getScoreDistribution(combinedJson);
 
   const parsedResult = {
     scoresByKeywords,
@@ -392,7 +403,19 @@ const getReviewSubmissionInfo = combinedJson => {
     recommendsByReviewerName,
     reviewCountByReviewerName,
     timeSeriesByScore,
-    lastEditSeriesByScore
+    lastEditSeriesByScore,
+    acceptedMeanScore,
+    acceptedMeanConfidence,
+    acceptedMeanRecommend,
+    rejectedMeanScore,
+    rejectedMeanConfidence,
+    rejectedMeanRecommend,
+    acceptedMinScore,
+    rejectedMaxScore,
+    acceptedScoreDistribution,
+    acceptedRecommendDistribution,
+    rejectedScoreDistribution,
+    rejectedRecommendDistribution
   };
 
   return { infoType: 'review_submission', infoData: parsedResult, timeProcessed: new Date(), fileName: 'review_submission' };
@@ -432,7 +455,7 @@ const getScoresAndRecommendsByCategory = (combinedJson, category) => {
   };
 };
 
-const getScoreTimeseries = (combinedJson) => {
+const getScoreTimeseries = combinedJson => {
   const submissionData = {};
   const lastEditData = {};
 
@@ -472,6 +495,124 @@ const getScoreTimeseries = (combinedJson) => {
   );
 
   return { timeSeriesByScore: timeList, lastEditSeriesByScore: lastEditList };
+};
+
+const getScoreDistribution = combinedJson => {
+// Idea: from -3 to 3 (min to max scores possible), every 0.25 will be a gap
+  let acceptedScoreDistributionCounts = fillRange(-3, 3, 0.25);
+  let acceptedRecommendDistributionCounts = fillRange(0, 1, 0.1);
+  let rejectedScoreDistributionCounts = fillRange(-3, 3, 0.25);
+  let rejectedRecommendDistributionCounts = fillRange(0, 1, 0.1);
+
+  const scoreDistributionLabels = [];
+  const recommendDistributionLabels = [];
+
+  for (let i = 0; i < acceptedScoreDistributionCounts.length - 1; i++) {
+    scoreDistributionLabels[i] = acceptedScoreDistributionCounts[i].toFixed(2) + ' ~ ' + acceptedScoreDistributionCounts[i + 1].toFixed(2);
+  }
+  for (let i = 0; i < acceptedRecommendDistributionCounts.length - 1; i++) {
+    recommendDistributionLabels[i] = acceptedRecommendDistributionCounts[i].toFixed(1) + ' ~ ' + acceptedRecommendDistributionCounts[i + 1].toFixed(1);
+  }
+
+  acceptedScoreDistributionCounts = setArrayValuesToZero(acceptedScoreDistributionCounts);
+  acceptedRecommendDistributionCounts = setArrayValuesToZero(acceptedRecommendDistributionCounts);
+  rejectedScoreDistributionCounts = setArrayValuesToZero(rejectedScoreDistributionCounts);
+  rejectedRecommendDistributionCounts = setArrayValuesToZero(rejectedRecommendDistributionCounts);
+
+  const acceptedConfidenceList = [];
+  const acceptedRecommendList = [];
+  const acceptedScoreList = [];
+  const rejectedConfidenceList = [];
+  const rejectedRecommendList = [];
+  const rejectedScoreList = [];
+  const reviewsGroupBySubmissionId = _.mapValues(_.groupBy(combinedJson, 'submissionId'));
+
+  var acceptedMinScore = 3;
+  var rejectedMaxScore = 0;
+
+  for (const submissionId in reviewsGroupBySubmissionId) {
+    const acceptedScores = [];
+    const acceptedConfidences = [];
+    const acceptedRecommends = [];
+    const acceptedWeightedScores = [];
+    const acceptedWeightedRecommends = [];
+    const rejectedScores = [];
+    const rejectedConfidences = [];
+    const rejectedRecommends = [];
+    const rejectedWeightedScores = [];
+    const rejectedWeightedRecommends = [];
+
+    reviewsGroupBySubmissionId[submissionId].map(review => {
+    // overall evaluation || reviewer's confidence || Recommend for best paper
+    // Sample: Overall evaluation: -3\nReviewer's confidence: 5\nRecommend for best paper: no
+      const { overallEvaluation, confidence, recommendForBestPaper } = review.scores;
+      const recommendedScore = recommendForBestPaper ? 1 : 0;
+
+      if (review.decision === 'accept') {
+        acceptedScores.push(overallEvaluation);
+        acceptedConfidences.push(confidence);
+        acceptedRecommends.push(recommendedScore);
+        acceptedWeightedScores.push(overallEvaluation * confidence);
+        acceptedWeightedRecommends.push(recommendedScore * confidence);
+      } else {
+        rejectedScores.push(overallEvaluation);
+        rejectedConfidences.push(confidence);
+        rejectedRecommends.push(recommendedScore);
+        rejectedWeightedScores.push(overallEvaluation * confidence);
+        rejectedWeightedRecommends.push(recommendedScore * confidence);
+      }
+    });
+
+    if (acceptedScores.length > 0) {
+      const acceptedConfidenceSum = acceptedConfidences.reduce(sum);
+      acceptedConfidenceList.push(acceptedConfidenceSum / acceptedConfidences.length);
+
+      const totalAcceptedWeightedScore = acceptedWeightedScores.reduce(sum) / acceptedConfidenceSum;
+      const totalAcceptedWeightedRecommend = acceptedWeightedRecommends.reduce(sum) / acceptedConfidenceSum;
+      acceptedScoreList.push(totalAcceptedWeightedScore);
+      acceptedRecommendList.push(totalAcceptedWeightedRecommend);
+
+      // 0 based index, but answer is 1 based
+      const acceptedScoreColumn = Math.max(Math.ceil((totalAcceptedWeightedScore + 3) / 0.25) - 1, 0);
+      const acceptedRecommendColumn = Math.max(Math.ceil((totalAcceptedWeightedRecommend) / 0.1) - 1, 0);
+      acceptedScoreDistributionCounts[acceptedScoreColumn] += 1;
+      acceptedRecommendDistributionCounts[acceptedRecommendColumn] += 1;
+
+      acceptedMinScore = Math.min(totalAcceptedWeightedScore, acceptedMinScore);
+    }
+
+    if (rejectedScores.length > 0) {
+      const rejectedConfidenceSum = rejectedConfidences.reduce(sum);
+      rejectedConfidenceList.push(rejectedConfidenceSum / rejectedConfidences.length);
+
+      const totalRejectedWeightedScore = rejectedWeightedScores.reduce(sum) / rejectedConfidenceSum;
+      const totalRejectedWeightedRecommend = rejectedWeightedRecommends.reduce(sum) / rejectedConfidenceSum;
+      rejectedScoreList.push(totalRejectedWeightedScore);
+      rejectedRecommendList.push(totalRejectedWeightedRecommend);
+
+      // 0 based index, but answer is 1 based
+      const rejectedScoreColumn = Math.max(Math.ceil((totalRejectedWeightedScore + 3) / 0.25) - 1, 0);
+      const rejectedRecommendColumn = Math.max(Math.ceil((totalRejectedWeightedRecommend) / 0.1) - 1, 0);
+      rejectedScoreDistributionCounts[rejectedScoreColumn] += 1;
+      rejectedRecommendDistributionCounts[rejectedRecommendColumn] += 1;
+
+      rejectedMaxScore = Math.max(totalRejectedWeightedScore, rejectedMaxScore);
+    }
+  }
+  return {
+    acceptedMeanScore: acceptedScoreList.reduce(sum) / acceptedScoreList.length,
+    acceptedMeanConfidence: acceptedConfidenceList.reduce(sum) / acceptedConfidenceList.length,
+    acceptedMeanRecommend: acceptedRecommendList.reduce(sum) / acceptedRecommendList.length,
+    rejectedMeanScore: rejectedScoreList.reduce(sum) / rejectedScoreList.length,
+    rejectedMeanConfidence: rejectedConfidenceList.reduce(sum) / rejectedConfidenceList.length,
+    rejectedMeanRecommend: rejectedRecommendList.reduce(sum) / rejectedRecommendList.length,
+    acceptedMinScore,
+    rejectedMaxScore,
+    acceptedScoreDistribution: { labels: scoreDistributionLabels, counts: acceptedScoreDistributionCounts },
+    acceptedRecommendDistribution: { labels: recommendDistributionLabels, counts: acceptedRecommendDistributionCounts },
+    rejectedScoreDistribution: { labels: scoreDistributionLabels, counts: rejectedScoreDistributionCounts },
+    rejectedRecommendDistribution: { labels: recommendDistributionLabels, counts: rejectedRecommendDistributionCounts }
+  };
 };
 
 const getAuthorReviewInfo = combinedJson => {
