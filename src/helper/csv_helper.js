@@ -25,18 +25,30 @@ const papaConfig = {
  * @returns {Object} an object with key-value pairs of { authors : author[], uploadDateTime, fileName }
  * @returns {Object} an object with error property if parse fails
  */
-const parseAuthor = (file, fileName) => {
+const parseAuthor = (file, fileName, firstLine, hasHeader) => {
   // author.csv: header row, author names with organisations, countries, emails
   // data format:
   // submission ID | f name | s name | email | country | organisation | page | person ID | corresponding?
   // replace first line with a nicer header for objects
   let content = file.buffer.toString('utf8');
-  content =
-    'submissionId, firstName, lastName, email, country, organisation, page, personId, corresponding\r' +
+
+  console.log(hasHeader);
+  console.log(firstLine);
+
+  if (hasHeader) {
+    content =
+    firstLine + '\r' +
     content.substring(content.indexOf('\r') + 1);
+  } else {
+    content = firstLine + '\n' +
+    (file.buffer.toString('utf8'));
+  }
   content = content.replace(new RegExp(/(", )|(," )/g), ', ');
   content = content.replace(new RegExp(/(", )/g), ', ');
+
   const parsedContent = Papa.parse(content, papaConfig);
+
+  console.log(parsedContent.errors);
 
   if (parsedContent.errors.length !== 0) {
     // error handling
@@ -90,13 +102,23 @@ const parseAuthor = (file, fileName) => {
  * @returns {Object} an object with key-value pairs of { reviews : review[], uploadDateTime, fileName }
  * @returns {Object} an object with error property if parse fails
  */
-const parseReview = (file, fileName) => {
+const parseReview = (file, fileName, firstLine, hasHeader) => {
   // review.csv
   // data format:
   // review ID | paper ID? | reviewer ID | reviewer name | unknown | text | scores | overall score | unknown | unknown | unknown | unknown | date | time | recommend?
   // File has NO header
-  const content = 'reviewId, submissionId, reviewerId, reviewerName, expertiseLevel, reviewComments, scores, overallScore, unknown, unknown, unknown, unknown, date, time, isRecommended\n' +
+  let tempContent = file.buffer.toString('utf8');
+
+  if (hasHeader) {
+    tempContent =
+    firstLine + '\r' +
+    tempContent.substring(tempContent.indexOf('\r') + 1);
+  } else {
+    tempContent = firstLine + '\n' +
     (file.buffer.toString('utf8'));
+  }
+  const content = tempContent;
+
   const parsedContent = Papa.parse(content, papaConfig);
   if (parsedContent.errors.length !== 0) {
     // error handling
@@ -155,15 +177,21 @@ const parseReview = (file, fileName) => {
  * @returns {Object} an object with key-value pairs of { submissions : submission[], uploadDateTime, fileName }
  * @returns {Object} an object with error property if parse fails
  */
-const parseSubmission = (file, fileName) => {
+const parseSubmission = (file, fileName, firstLine, hasHeader) => {
   // submission.csv
   // data format:
   // submission ID | track ID | track name | title | authors | submit time | last update time | form fields | keywords | decision | notified | reviews sent | abstract
   // File has header
   let content = file.buffer.toString('utf8');
-  content =
-    'submissionId, trackId, trackName, title, authors, submitTime, lastUpdateTime, formFields, keywords, decision, notified, reviewsSent, abstract\r' +
+
+  if (hasHeader) {
+    content =
+    firstLine + '\r' +
     content.substring(content.indexOf('\r') + 1);
+  } else {
+    content = firstLine + '\n' +
+    (file.buffer.toString('utf8'));
+  }
 
   const parsedContent = Papa.parse(content, papaConfig);
   if (parsedContent.errors.length !== 0) {
