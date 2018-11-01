@@ -13,35 +13,38 @@ router.get('/', (req, res, next) => {
 
 router.post('/upload', upload.array('file'), (req, res) => {
   let result = [];
-  const csvFiles = req.files;
-  const { fileType } = req.body;
 
+  const csvFiles = req.files;
+  const { fileTypes, hasHeaders, firstLines } = req.body;
   csvFiles.map((csvFile, index) => {
     const fileName = csvFile.originalname;
-    if (fileType && index < fileType.length) {
-      switch (fileType[index]) {
+
+    if (fileTypes && index < fileTypes.length) {
+      switch (fileTypes[index]) {
         case 'review':
-          result.push(jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName)));
+          result.push(jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName, firstLines[index], hasHeaders[index])));
           break;
         case 'author':
-          result.push(jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName)));
+          result.push(jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName, firstLines[index], hasHeaders[index])));
           break;
         case 'submission':
-          result.push(jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName)));
+          result.push(jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName, firstLines[index], hasHeaders[index])));
           break;
         default:
           res.sendStatus(422); // unknown file, no api to process
       }
     } else {
+      console.log('went here');
+
       switch (fileName) {
         case 'review.csv':
-          result.push(jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName)));
+          result.push(jsonHelper.getReviewInfo(csvHelper.parseReview(csvFile, fileName, firstLines[0], hasHeaders[0])));
           break;
         case 'author.csv':
-          result.push(jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName)));
+          result.push(jsonHelper.getAuthorInfo(csvHelper.parseAuthor(csvFile, fileName, firstLines[0], hasHeaders[0])));
           break;
         case 'submission.csv':
-          result.push(jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName)));
+          result.push(jsonHelper.getSubmissionInfo(csvHelper.parseSubmission(csvFile, fileName, firstLines[0], hasHeaders[0])));
           break;
         default:
           res.sendStatus(422); // unknown file, no api to process
@@ -115,6 +118,7 @@ const PROCESS_TYPES = {
 router.post('/process/:type', (req, res) => {
   const data = req.body;
   const { type } = req.params;
+  console.log(req.params);
   let result = null;
   switch (type) {
     case PROCESS_TYPES.ALL_AUTHORS:
